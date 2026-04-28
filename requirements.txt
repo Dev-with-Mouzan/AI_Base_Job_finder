@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+streamlit
+langchain
+langchain-community
+pypdf
+scikit-learn
+apify-client
+requests
+numpy
+pydantic-settings
+python-dotenv
+langchain-ollama
+python-multipart
+langchain-groq

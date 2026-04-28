@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResumeIQ — AI Career Matching</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- Noise texture overlay -->
+    <div class="noise-overlay"></div>
+
+    <!-- Ambient grid -->
+    <div class="grid-bg"></div>
+
+    <!-- === LANDING / UPLOAD SCREEN === -->
+    <div id="landingScreen" class="screen active">
+        <nav class="nav">
+            <div class="nav-logo">
+                <span class="logo-mark">R</span>
+                <span class="logo-text">ResumeIQ</span>
+            </div>
+            <div class="nav-badge">Powered by AI</div>
+        </nav>
+
+        <div class="hero">
+            <div class="hero-eyebrow">
+                <span class="dot"></span>
+                Intelligent Career Matching
+            </div>
+            <h1 class="hero-title">
+                Find jobs that<br>
+                <em>actually fit you</em>
+            </h1>
+            <p class="hero-sub">Upload your resume and let our AI surface the roles perfectly aligned to your skills, experience, and career trajectory.</p>
+
+            <div class="upload-zone" id="uploadZone">
+                <input type="file" id="resumeInput" accept=".pdf" hidden>
+                <div class="upload-visual">
+                    <div class="upload-icon-ring">
+                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="12" y1="18" x2="12" y2="12"/>
+                            <line x1="9" y1="15" x2="15" y2="15"/>
+                        </svg>
+                    </div>
+                    <div class="upload-text">
+                        <span class="upload-primary" id="uploadPrimary">Drop your PDF resume here</span>
+                        <span class="upload-secondary">or <label for="resumeInput" class="upload-browse">browse files</label></span>
+                    </div>
+                </div>
+                <div class="upload-meta">
+                    <span>PDF only</span>
+                    <span class="sep">·</span>
+                    <span>Max 10MB</span>
+                    <span class="sep">·</span>
+                    <span>Processed securely</span>
+                </div>
+                <div id="fileSelectedBanner" class="file-selected-banner hidden">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span id="fileSelectedName"></span>
+                </div>
+            </div>
+
+            <button id="matchBtn" class="cta-btn" disabled>
+                <span class="cta-text">Analyse Resume</span>
+                <span class="cta-arrow">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </span>
+            </button>
+        </div>
+
+        <div class="feature-strip">
+            <div class="feature-item">
+                <span class="feature-num">01</span>
+                <span class="feature-label">Semantic Matching</span>
+            </div>
+            <div class="divider-v"></div>
+            <div class="feature-item">
+                <span class="feature-num">02</span>
+                <span class="feature-label">Live Job Scraping</span>
+            </div>
+            <div class="divider-v"></div>
+            <div class="feature-item">
+                <span class="feature-num">03</span>
+                <span class="feature-label">AI Career Coach</span>
+            </div>
+            <div class="divider-v"></div>
+            <div class="feature-item">
+                <span class="feature-num">04</span>
+                <span class="feature-label">Match Scoring</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- === PROCESSING SCREEN === -->
+    <div id="processingScreen" class="screen">
+        <div class="processing-content">
+            <div class="processing-spinner">
+                <div class="spinner-ring outer"></div>
+                <div class="spinner-ring inner"></div>
+                <div class="spinner-core">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 8v4l3 3"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="processing-label" id="processingLabel">Initialising...</div>
+            <div class="processing-steps">
+                <div class="step-item" id="step1">
+                    <div class="step-dot"></div>
+                    <span>Extracting resume content</span>
+                </div>
+                <div class="step-item" id="step2">
+                    <div class="step-dot"></div>
+                    <span>Generating search keywords</span>
+                </div>
+                <div class="step-item" id="step3">
+                    <div class="step-dot"></div>
+                    <span>Scraping live job listings</span>
+                </div>
+                <div class="step-item" id="step4">
+                    <div class="step-dot"></div>
+                    <span>Running semantic matching</span>
+                </div>
+                <div class="step-item" id="step5">
+                    <div class="step-dot"></div>
+                    <span>Generating AI insights</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- === DASHBOARD SCREEN === -->
+    <div id="dashboardScreen" class="screen">
+        <div class="dash-nav">
+            <div class="dash-nav-left">
+                <button id="backBtn" class="back-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                    New Analysis
+                </button>
+                <div class="dash-logo">
+                    <span class="logo-mark sm">R</span>
+                    <span class="logo-text">ResumeIQ</span>
+                </div>
+            </div>
+            <div class="dash-stats">
+                <div class="stat-pill" id="jobsFoundPill">
+                    <span class="stat-pill-dot"></span>
+                    <span id="jobsCountText">0 Jobs Found</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="dash-layout">
+            <!-- LEFT PANEL: Resume -->
+            <aside class="dash-sidebar">
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            Resume Content
+                        </div>
+                        <span class="panel-badge">Extracted</span>
+                    </div>
+                    <div class="resume-content" id="resumeContent"></div>
+                </div>
+
+                <div class="coach-promo panel">
+                    <div class="coach-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </div>
+                    <div class="coach-text">
+                        <strong>AI Career Coach</strong>
+                        <span>Get personalised resume improvement tips</span>
+                    </div>
+                    <button class="coach-open-btn" id="openChatBtn">Chat →</button>
+                </div>
+            </aside>
+
+            <!-- RIGHT: Job matches -->
+            <main class="dash-main">
+                <div class="results-header">
+                    <h2 class="results-title">Matched Opportunities</h2>
+                    <div class="sort-controls">
+                        <span class="sort-label">Sort by</span>
+                        <button class="sort-btn active" data-sort="score">Match Score</button>
+                        <button class="sort-btn" data-sort="company">Company</button>
+                    </div>
+                </div>
+
+                <div id="jobsGrid" class="jobs-grid"></div>
+            </main>
+        </div>
+    </div>
+
+    <!-- === CHAT PANEL === -->
+    <div id="chatPanel" class="chat-panel hidden">
+        <div class="chat-overlay" id="chatOverlay"></div>
+        <div class="chat-drawer">
+            <div class="chat-drawer-header">
+                <div class="chat-drawer-title">
+                    <div class="coach-avatar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>
+                    </div>
+                    <div>
+                        <div class="chat-name">Career Coach AI</div>
+                        <div class="chat-status"><span class="online-dot"></span>Ready to help</div>
+                    </div>
+                </div>
+                <button class="chat-close-btn" id="closeChatBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-msg bot">
+                    <div class="msg-avatar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>
+                    </div>
+                    <div class="msg-bubble">
+                        I've analysed your resume. Ask me anything — how to improve a section, tailor it for a specific role, or what skills to highlight.
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-typing hidden" id="chatTyping">
+                <div class="typing-dots"><span></span><span></span><span></span></div>
+                <span>AI is thinking…</span>
+            </div>
+
+            <div class="chat-input-row">
+                <textarea id="chatInput" class="chat-textarea" placeholder="Ask about your resume…" rows="1"></textarea>
+                <button id="sendBtn" class="send-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
