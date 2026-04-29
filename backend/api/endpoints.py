@@ -2,7 +2,7 @@ import logging
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from typing import Dict, Any
 from backend.services.resume_service import extract_text_from_pdf
-from backend.services.job_service import fetch_jobs_from_apify
+from backend.services.job_service import fetch_job_listings
 from backend.services.match_service import match_resume_with_jobs, get_resume_improvement_chat, extract_search_terms
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
@@ -37,8 +37,8 @@ def match_resume(file: UploadFile = File(...)) -> Dict[str, Any]:
         search_terms = extract_search_terms(resume_text)
         logger.info(f"Generated search terms: {search_terms}")
         
-        logger.info("Fetching live jobs from Apify...")
-        jobs = fetch_jobs_from_apify(search_terms)
+        logger.info("Fetching live jobs...")
+        jobs = fetch_job_listings(search_terms)
         logger.info(f"Fetched {len(jobs)} jobs")
         
         if not jobs:

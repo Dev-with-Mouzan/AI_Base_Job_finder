@@ -5,11 +5,12 @@ langchain
 langchain-community
 pypdf
 scikit-learn
-apify-client
 requests
+beautifulsoup4
+lxml
 numpy
 pydantic-settings
 python-dotenv
-langchain-ollama
+sentence-transformers
 python-multipart
 langchain-groq

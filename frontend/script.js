@@ -69,9 +69,11 @@ resumeInput.addEventListener('change', (e) => {
     }
 });
 
-// Allow clicking the upload zone
-document.getElementById('uploadZone').addEventListener('click', () => {
-    resumeInput.click();
+// Allow clicking the upload zone (but avoid double-triggering if label/browse is clicked)
+document.getElementById('uploadZone').addEventListener('click', (e) => {
+    if (e.target.tagName !== 'LABEL' && e.target.tagName !== 'INPUT' && !e.target.classList.contains('upload-browse')) {
+        resumeInput.click();
+    }
 });
 
 // === MATCHING LOGIC ===
@@ -259,13 +261,22 @@ function addMessageToUI(role, content) {
     const avatar = role === 'bot' ? 
         `<div class="msg-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg></div>` : '';
     
+    // Use marked for bot responses, escape user input for safety
+    const displayContent = role === 'bot' ? marked.parse(content) : escapeHTML(content);
+    
     msgDiv.innerHTML = `
         ${avatar}
-        <div class="msg-bubble">${content}</div>
+        <div class="msg-bubble">${displayContent}</div>
     `;
     
     chatMessages.appendChild(msgDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 chatInput.addEventListener('input', () => {

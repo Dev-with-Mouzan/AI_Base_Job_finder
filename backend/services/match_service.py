@@ -4,7 +4,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from backend.core.config import settings
 
 _llm = None
-_embeddings = None
+_embeddings_model = None
 
 def _get_llm():
     global _llm
@@ -16,23 +16,27 @@ def _get_llm():
                 model=settings.GROQ_MODEL
             )
         else:
-            from langchain_ollama import ChatOllama
-            _llm = ChatOllama(model=settings.LLM_MODEL)
+            # Fallback to a clear error if no LLM is available
+            raise ValueError("Groq API Key is required when Ollama is disabled.")
     return _llm
 
-def _get_embeddings():
-    global _embeddings
-    if _embeddings is None:
-        from langchain_ollama import OllamaEmbeddings
-        _embeddings = OllamaEmbeddings(model=settings.EMBED_MODEL)
-    return _embeddings
+def _get_embeddings_model():
+    global _embeddings_model
+    if _embeddings_model is None:
+        from sentence_transformers import SentenceTransformer
+        # all-MiniLM-L6-v2 is a fast and accurate local model
+        _embeddings_model = SentenceTransformer('all-MiniLM-L6-v2')
+    return _embeddings_model
 
-def get_ollama_embedding(text: str) -> List[float]:
+def get_embedding(text: str) -> List[float]:
+    """Get semantic embedding using local sentence-transformers"""
     try:
-        return _get_embeddings().embed_query(text)
+        model = _get_embeddings_model()
+        embedding = model.encode(text)
+        return embedding.tolist()
     except Exception as e:
-        print(f"Ollama embedding error: {e}")
-        return [0.0] * 768
+        print(f"Embedding model not available (Offline or Error). Using fallback matching. Error: {e}")
+        return None
 
 def get_match_analysis(resume_text: str, job_description: str) -> str:
     prompt = f"""As a recruiter, analyze the match between this resume and job.
@@ -51,18 +55,25 @@ Job: {job_description[:800]}
 def match_resume_with_jobs(resume_text: str, jobs: List[Dict[str, Any]], top_n: int = 10) -> List[Dict[str, Any]]:
     if not jobs: return []
     
-    print("Generating resume embedding...")
-    resume_emb = np.array(get_ollama_embedding(resume_text)).reshape(1, -1)
+    print("Attempting semantic matching...")
+    resume_emb_list = get_embedding(resume_text)
     
-    print("Generating job embeddings...")
+    # If embedding model failed, use simple keyword matching fallback
+    if resume_emb_list is None:
+        print("AI Model unavailable. Falling back to keyword-based matching...")
+        return _keyword_match_fallback(resume_text, jobs, top_n)
+
+    resume_emb = np.array(resume_emb_list).reshape(1, -1)
+    
     job_embs = []
     for job in jobs:
-        emb = get_ollama_embedding(job.get("description", ""))
-        job_embs.append(emb)
+        emb = get_embedding(job.get("description", ""))
+        if emb is None: # Fallback if individual job fails
+            job_embs.append([0.0] * 384)
+        else:
+            job_embs.append(emb)
     
     job_embs = np.array(job_embs)
-    
-    print("Calculating similarities...")
     similarities = cosine_similarity(resume_emb, job_embs)[0]
     
     matches = []
@@ -75,11 +86,28 @@ def match_resume_with_jobs(resume_text: str, jobs: List[Dict[str, Any]], top_n: 
     matches.sort(key=lambda x: x["score"], reverse=True)
     top_matches = matches[:top_n]
     
-    print("Generating analysis for top matches...")
     for i in range(min(3, len(top_matches))):
         top_matches[i]["analysis"] = get_match_analysis(resume_text, top_matches[i]["description"])
             
     return top_matches
+
+def _keyword_match_fallback(resume_text: str, jobs: List[Dict[str, Any]], top_n: int = 10) -> List[Dict[str, Any]]:
+    """Simple keyword frequency matching when AI models are unavailable"""
+    resume_words = set(resume_text.lower().split())
+    matches = []
+    
+    for job in jobs:
+        job_text = (job.get("title", "") + " " + job.get("description", "")).lower()
+        job_words = job_text.split()
+        
+        # Count overlapping words
+        overlap = sum(1 for word in job_words if word in resume_words)
+        score = min(0.9, overlap / 50.0) # Simple normalization
+        
+        matches.append({**job, "score": score})
+    
+    matches.sort(key=lambda x: x["score"], reverse=True)
+    return matches[:top_n]
 
 def get_resume_improvement_chat(resume_text: str, message: str, history: List[Dict[str, str]] = []) -> str:
     """Get resume improvement suggestions from Groq LLM"""
@@ -89,8 +117,11 @@ The candidate's resume content is:
 {resume_text}
 
 Provide specific, actionable advice to improve the resume based on the candidate's questions. 
-If they ask about specific sections (like 'Experience' or 'Skills'), refer to their current content.
-Keep your responses professional, encouraging, and concise.
+ALWAYS structure your response using Markdown:
+- Use **bold** for emphasis.
+- Use bullet points for lists.
+- Use headers if the response is long.
+- Keep your responses professional, encouraging, and concise.
 """
 
     from langchain_core.messages import HumanMessage, SystemMessage, AIMessage

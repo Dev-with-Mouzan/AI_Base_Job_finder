@@ -1,10 +1,10 @@
 import requests
+import time
 from typing import List, Dict, Any
-from backend.core.config import settings
-from apify_client import ApifyClient
+from bs4 import BeautifulSoup
 
 def get_sample_jobs() -> List[Dict[str, Any]]:
-    """Return sample jobs for testing when Apify is not available"""
+    """Return sample jobs for testing when scraping fails"""
     return [
         {
             "title": "Software Engineer",
@@ -26,40 +26,70 @@ def get_sample_jobs() -> List[Dict[str, Any]]:
         }
     ]
 
-def fetch_jobs_from_apify(search_terms: List[str] = None) -> List[Dict[str, Any]]:
-    """Fetch job listings from Apify API using the official client"""
+def fetch_jobs_free(search_terms: List[str] = None) -> List[Dict[str, Any]]:
+    """Fetch job listings from LinkedIn Guest API (Free)"""
     if not search_terms:
         search_terms = ["software engineer"]
+    
+    all_jobs = []
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
 
-    try:
-        if not settings.APIFY_API_KEY or settings.APIFY_API_KEY == "YOUR_APIFY_API_KEY":
-            print("Apify API key missing, using sample jobs")
-            return get_sample_jobs()
-
-        client = ApifyClient(settings.APIFY_API_KEY)
-        
-        # Prepare Actor input
-        run_input = {
-            "searchTerms": search_terms,
-            "locations": ["United States"],
-            "limit": 15,
-            "maxConcurrency": 5
-        }
-
-        print(f"Starting Apify scraper for: {search_terms}")
-        # Run the Actor and wait for it to finish
-        run = client.actor("junglee/linkedin-job-scraper").call(run_input=run_input, timeout_secs=120)
-
-        # Fetch results from the run's dataset
-        print(f"Scraper finished. Fetching results from dataset: {run['defaultDatasetId']}")
-        dataset_items = client.dataset(run["defaultDatasetId"]).list_items().items
-        
-        if not dataset_items:
-            print("No jobs found in scrape results")
-            return get_sample_jobs()
+    # Use only the first 2 search terms to avoid rate limits
+    for term in search_terms[:2]:
+        try:
+            print(f"Scraping LinkedIn Guest API for: {term}")
+            # Public LinkedIn Guest Job Search API
+            url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={term}&location=United%20States&start=0"
             
-        return dataset_items
+            response = requests.get(url, headers=headers, timeout=15)
+            if response.status_code != 200:
+                print(f"Failed to fetch jobs for {term}: HTTP {response.status_code}")
+                continue
 
-    except Exception as e:
-        print(f"Apify Client error: {e}")
-        return get_sample_jobs()
+            soup = BeautifulSoup(response.text, "lxml")
+            job_cards = soup.find_all("li")
+
+            for card in job_cards:
+                try:
+                    title_tag = card.find("h3", class_="base-search-card__title")
+                    company_tag = card.find("h4", class_="base-search-card__subtitle")
+                    link_tag = card.find("a", class_="base-card__full-link")
+                    
+                    if title_tag and company_tag and link_tag:
+                        title = title_tag.get_text(strip=True)
+                        company = company_tag.get_text(strip=True)
+                        job = {
+                            "title": title,
+                            "company": company,
+                            "url": link_tag["href"],
+                            "description": f"Job Title: {title} at {company}. This position is listed on LinkedIn. Please visit the link for the full job description and requirements."
+                        }
+                        all_jobs.append(job)
+                except Exception as e:
+                    continue
+
+            # Respectful delay
+            time.sleep(1)
+            
+        except Exception as e:
+            print(f"Error scraping LinkedIn for {term}: {e}")
+            continue
+
+    return all_jobs
+
+def fetch_job_listings(search_terms: List[str] = None) -> List[Dict[str, Any]]:
+    """
+    Primary job fetching function. 
+    Uses the free scraper and falls back to samples if needed.
+    """
+    print("Attempting job scraping...")
+    jobs = fetch_jobs_free(search_terms)
+    
+    if jobs:
+        print(f"Successfully fetched {len(jobs)} jobs.")
+        return jobs
+
+    print("Scraping failed or returned no results. Falling back to sample jobs.")
+    return get_sample_jobs()
